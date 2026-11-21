@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Faial Golf · Domínios à venda</title>
+<meta name="description" content="faialgolf.com, faialgolfcourse.com e faialgolfe.com estão à venda. Acerte no buraco e faça a águia da Penha d’Águia levantar voo.">
+<meta property="og:title" content="Faial Golf">
+<meta property="og:description" content="Três domínios à venda. Acerte no buraco e faça a águia levantar voo.">
+<meta name="theme-color" content="#0c4a63">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sea: #0c4a63;
+    --panel: rgba(18, 38, 31, 0.82);
+    --ink: #fbf8f2;
+    --ink-soft: rgba(251, 248, 242, 0.72);
+    --lamp: #ffd36e;
+    --flag: #d1352b;
+    --night: #10261d;
+    --font: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--sea);
+    overflow: hidden;
+    font-family: var(--font);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .hud {
+    position: fixed;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    pointer-events: none;
+  }
+  .hud-top {
+    top: 0;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+  .hud-bottom {
+    bottom: 0;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .panel {
+    pointer-events: auto;
+    background: var(--panel);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border-radius: 14px;
+    padding: 9px 14px;
+  }
+  .brand {
+    font-weight: 800;
+    font-size: 1.12rem;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .status {
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .status b { color: var(--ink); font-weight: 600; }
+  .right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .lang {
+    display: flex;
+    padding: 4px;
+    gap: 2px;
+  }
+  .lang button {
+    font: 600 0.82rem var(--font);
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+  .lang button[aria-pressed="true"] {
+    background: var(--ink);
+    color: #10261d;
+  }
+  .wind {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+  .wind svg { width: 22px; height: 22px; transition: transform 0.5s ease; }
+  .wind[hidden] { display: none; }
+  .hint {
+    max-width: 36ch;
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  .skip {
+    pointer-events: auto;
+    margin-top: 8px;
+    font: 400 0.86rem var(--font);
+    color: var(--ink);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(251, 248, 242, 0.5);
+    cursor: pointer;
+    padding: 6px;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    top: 22%;
+    transform: translate(-50%, -8px);
+    max-width: min(88vw, 380px);
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.4;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast-sub { margin-top: 8px; font-size: 0.86rem; color: var(--ink-soft); }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: rgba(5, 12, 22, 0.25);
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .overlay[hidden] { display: none; }
+  .overlay.show { opacity: 1; }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(13, 33, 27, 0.95);
+    border: 1px solid rgba(255, 211, 110, 0.35);
+    border-radius: 22px;
+    padding: 26px 24px 20px;
+    box-shadow: 0 0 80px rgba(255, 211, 110, 0.18);
+    transform: translateY(14px);
+    transition: transform 0.6s ease;
+  }
+  .overlay.show .card { transform: none; }
+  .score {
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+    color: var(--lamp);
+    font-weight: 600;
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 2rem;
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .card p { margin: 0 0 12px; line-height: 1.45; color: var(--ink-soft); }
+  .domains {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+  }
+  .domains li {
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(251, 248, 242, 0.12);
+    font-size: 1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+  .domains li:first-child { font-size: 1.15rem; font-weight: 800; color: var(--lamp); }
+  .tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--night);
+    background: var(--lamp);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font: 600 1rem var(--font);
+    border-radius: 12px;
+    padding: 13px 16px;
+    cursor: pointer;
+    text-decoration: none;
+    border: 0;
+  }
+  .btn-primary { background: var(--lamp); color: var(--night); }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .small { font-size: 0.88rem; margin-top: 10px; text-align: center; }
+  .small a { color: var(--ink); overflow-wrap: anywhere; }
+  .hud-top { z-index: 5; }
+  .note { margin: 14px 0 0; font-size: 0.78rem; line-height: 1.4; text-align: center; color: var(--ink-soft); opacity: 0.8; }
+  .btn-ghost {
+    background: none;
+    color: var(--ink-soft);
+    border: 1px solid rgba(251, 248, 242, 0.2);
+    margin-top: 8px;
+  }
+  button:focus-visible, a:focus-visible {
+    outline: 3px solid var(--lamp);
+    outline-offset: 2px;
+  }
+  body.ended .hud-bottom { visibility: hidden; }
+  @media (max-width: 420px) {
+    .overlay { align-items: flex-end; }
+    .card h2 { font-size: 1.7rem; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Mini-golfe no Faial, Madeira"></canvas>
+
+<div class="hud hud-top">
+  <div class="panel">
+    <div class="brand">Faial Golf</div>
+    <div class="status"><b id="strokes"></b> <span id="parLabel"></span></div>
+  </div>
+  <div class="right">
+    <div class="panel lang" role="group" aria-label="Idioma / Language">
+      <button type="button" data-lang="pt">PT</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+    <div class="panel wind" id="wind">
+      <svg id="windArrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h15m-5-5 5 5-5 5" fill="none" stroke="#fbf8f2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="windText"></span>
+    </div>
+  </div>
+</div>
+
+<div class="toast panel" id="toast" role="status" aria-live="polite"></div>
+
+<div class="hud hud-bottom">
+  <div class="panel hint" id="hint"></div>
+  <button type="button" class="skip" id="skipBtn"></button>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
+    <p class="score" id="cardScore"></p>
+    <h2 id="cardTitle"></h2>
+    <p id="cardForSale"></p>
+    <ul class="domains">
+      <li>faialgolf.com <span class="tag" id="mainTag"></span></li>
+      <li>faialgolfcourse.com</li>
+      <li>faialgolfe.com</li>
+    </ul>
+    <p id="cardOffers"></p>
+    <a class="btn btn-primary" id="mailBtn" href="#"></a>
+    <p class="small" id="copied" role="status" aria-live="polite" hidden></p>
+    <button type="button" class="btn btn-ghost" id="cardAction"></button>
+    <p class="note" id="cardNote"></p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- Textos PT / EN ---------- */
+  const T = {
+    pt: {
+      strokes: n => 'Tacadas: ' + n,
+      par: 'Par 4',
+      hintDrive: 'Arraste para trás e solte. É um par 4: cuidado com a ribeira e o vento.',
+      hintPutt: 'No green não há vento. Arraste para trás e solte para meter a bola no buraco.',
+      wind: k => 'Vento ' + k + ' km/h',
+      noWind: 'Sem vento',
+      splashes: [
+        'Splash! A bola foi dar de comer aos peixes.',
+        'O peixe-espada preto agradece a bola nova.',
+        'Os golfinhos vão jogar com essa bola esta tarde.',
+        'Mais uma bola para a coleção do fundo do mar.',
+        'Um cagarro viu tudo, mas não vai contar a ninguém.',
+        'Essa bola vai chegar aos Açores daqui a três semanas.',
+        'O Atlântico agradece a contribuição.',
+        'Os peixes já estão a pedir mais.'
+      ],
+      riverSplashes: [
+        'Splash! A ribeira levou a bola de boleia até ao mar.',
+        'Água fresca da serra! Essa bola não volta.',
+        'A ribeira não devolve nada. Nem bolas de golfe.',
+        'Até a corrente ficou admirada com a pontaria.',
+        'Esta água desce da serra e vai direta ao Atlântico.',
+        'A bola vai ribeira abaixo, sem bilhete de volta.'
+      ],
+      penalty: 'Mais uma tacada de penalidade.',
+      houseHits: [
+        'Toc toc! A dona da casa diz que não encomendou bolas de golfe.',
+        'Cuidado com o colmo! O telhado já aguenta a chuva do Faial, bolas de golfe é demais.',
+        'A bola foi visitar a casa. Devolveram-na com um bolo do caco.'
+      ],
+      rockHits: [
+        'Bong! A Penha d’Águia já viu muito pior do que uma bola de golfe.',
+        'A Penha d’Águia não sai dali. É a bola que tem de se desviar!',
+        'Acertou na Penha d’Águia! A águia ainda dorme, mas já abriu um olho.'
+      ],
+      onGreen: 'Está no green! Agora é meter no buraco.',
+      lip: 'Quase! A bola deu a volta ao buraco.',
+      help: 'O vento acalmou e o buraco cresceu um bocadinho. Força!',
+      skip: 'Ver os domínios à venda sem jogar',
+      winTitle: 'A águia levantou voo!',
+      skipTitle: 'Domínios à venda',
+      forSale: 'Estes três domínios estão à venda, em conjunto:',
+      offers: 'Aceitam-se propostas.',
+      note: 'Site independente, sem ligação a qualquer entidade oficial.',
+      mainTag: 'principal',
+      send: 'Enviar proposta por email',
+      copied: 'Endereço copiado:',
+      writeTo: 'Escreva para:',
+      replay: 'Jogar outra vez',
+      back: 'Voltar ao jogo',
+      score: (name, n) => n === 1 ? name + '!' : name + ' com ' + n + ' tacadas',
+      names: ['Hole in One', 'Eagle', 'Birdie', 'Par', 'Bogey', 'Double Bogey', 'Triple Bogey', 'O Faial perdoa tudo'],
+      subject: 'Proposta pelos domínios Faial Golf',
+      body: 'Olá,\n\nGostaria de apresentar uma proposta pelos domínios faialgolf.com, faialgolfcourse.com e faialgolfe.com.\n\nValor da proposta:\nNome:\nContacto:\n'
+    },
+    en: {
+      strokes: n => 'Strokes: ' + n,
+      par: 'Par 4',
+      hintDrive: 'Drag back and release. It’s a par 4: mind the stream and the wind.',
+      hintPutt: 'No wind on the green. Drag back and release to sink the putt.',
+      wind: k => 'Wind ' + k + ' km/h',
+      noWind: 'No wind',
+      splashes: [
+        'Splash! Your ball went to feed the fish.',
+        'The black scabbardfish thanks you for the new ball.',
+        'The dolphins will be playing with that ball this afternoon.',
+        'One more ball for the seabed collection.',
+        'A shearwater saw everything, but it won’t tell anyone.',
+        'That ball will reach the Azores in about three weeks.',
+        'The Atlantic thanks you for your contribution.',
+        'The fish are already asking for more.'
+      ],
+      riverSplashes: [
+        'Splash! The stream gave your ball a lift to the sea.',
+        'Fresh mountain water! That ball isn’t coming back.',
+        'The ribeira gives nothing back. Not even golf balls.',
+        'Even the current was impressed by your aim.',
+        'This water comes down from the mountains and heads straight for the Atlantic.',
+        'Your ball is heading downstream with no return ticket.'
+      ],
+      penalty: 'That’s one penalty stroke.',
+      houseHits: [
+        'Knock knock! The lady of the house says she didn’t order any golf balls.',
+        'Mind the thatch! That roof already handles Faial’s rain, never mind golf balls.',
+        'The ball went to visit the house. They sent it back with a bolo do caco.'
+      ],
+      rockHits: [
+        'Bong! Penha d’Águia has seen far worse than a golf ball.',
+        'Penha d’Águia isn’t going anywhere. The ball has to go around!',
+        'You hit Penha d’Águia! The eagle is still asleep, but it opened one eye.'
+      ],
+      onGreen: 'You’re on the green! Now sink it.',
+      lip: 'So close! The ball lipped out.',
+      help: 'The wind has dropped and the hole got a little bigger. Go for it!',
+      skip: 'See the domains for sale without playing',
+      winTitle: 'The eagle takes flight!',
+      skipTitle: 'Domains for sale',
+      forSale: 'These three domains are for sale as a bundle:',
+      offers: 'Offers welcome.',
+      note: 'Independent website, not affiliated with any official body.',
+      mainTag: 'main',
+      send: 'Send an offer by email',
+      copied: 'Address copied:',
+      writeTo: 'Write to:',
+      replay: 'Play again',
+      back: 'Back to the game',
+      score: (name, n) => n === 1 ? name + '!' : name + ' in ' + n + ' strokes',
+      names: ['Hole in One', 'Eagle', 'Birdie', 'Par', 'Bogey', 'Double Bogey', 'Triple Bogey', 'Faial forgives everything'],
+      subject: 'Offer for the Faial Golf domains',
+      body: 'Hello,\n\nI would like to make an offer for the domains faialgolf.com, faialgolfcourse.com and faialgolfe.com.\n\nOffer amount:\nName:\nContact:\n'
+    }
+  };
+  let lang = (navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en';
+  const t = () => T[lang];
+
+  /* ---------- Mundo (unidades lógicas) ---------- */
+  const LAND = [[140,2100],[860,2100],[905,1200],[875,1030],[790,950],[650,905],[605,820],[655,720],[785,680],[865,560],[855,380],[805,185],[700,105],[520,85],[340,115],[200,200],[148,360],[170,520],[165,600],[130,680],[88,760],[108,900],[168,1000],[118,1150],[98,1300]];
+  const FAIRWAY = [[405,1770],[635,1770],[634,1560],[622,1330],[582,1100],[566,880],[562,680],[568,470],[330,470],[320,680],[316,880],[338,1100],[376,1330],[400,1560]];
+  const GREEN = { x: 450, y: 320, rx: 150, ry: 105 };
+  const FRINGE_K = 1.15;
+  const HOLE = { x: 410, y: 298 };
+  const TEE = { x: 520, y: 1700 };
+  // Penha d’Águia: o grande rochedo junto ao mar (colisão = pegada elíptica da base)
+  const ROCK = { x: 190, y: 262, rx: 88, ry: 34 };
+  // Casa de colmo de Santana (colisão retangular)
+  const HOUSE = { x1: 610, y1: 420, x2: 730, y2: 520 };
+  // A ribeira corre ao longo do buraco, pela esquerda, e desagua no mar junto à Penha d’Águia
+  const RIVER = [[780,2050],[760,1820],[738,1620],[706,1440],[668,1295],[570,1165],[450,1085],[340,1030],[295,930],[272,780],[255,650],[240,560],[215,490],[165,440],[120,430]];
+  const RIVER_W = 65;
+  const BRIDGE = { x: 451, y: 1088, a: 0.5316, w: 72, l: 112 };
+  const SUN = { x: 40, y: -120 };
+
+  const VIEW_ALL = { x: 40, y: 40, w: 920, h: 1830 };
+  const VIEW_PUTT = { x: 255, y: 90, w: 500, h: 400 };
+
+  const DECEL = { green: 170, fringe: 420, fairway: 380, rough: 950 };
+  const MAX_CARRY = 1050, WIND_MAX = 150, MAX_PUTT = 430, CAPTURE = 235;
+
+  function smoothPath(pts) {
+    const p = new Path2D(), n = pts.length;
+    const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const s = mid(pts[n - 1], pts[0]);
+    p.moveTo(s[0], s[1]);
+    for (let i = 0; i < n; i++) {
+      const c = pts[i], m = mid(c, pts[(i + 1) % n]);
+      p.quadraticCurveTo(c[0], c[1], m[0], m[1]);
+    }
+    p.closePath();
+    return p;
+  }
+  function smoothLine(pts) {
+    const p = new Path2D(), n = pts.length;
+    p.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < n - 1; i++) {
+      const c = pts[i], d = pts[i + 1];
+      p.quadraticCurveTo(c[0], c[1], (c[0] + d[0]) / 2, (c[1] + d[1]) / 2);
+    }
+    p.lineTo(pts[n - 1][0], pts[n - 1][1]);
+    return p;
+  }
+  function ellipsePath(e, k) {
+    const p = new Path2D();
+    p.ellipse(e.x, e.y, e.rx * k, e.ry * k, 0, 0, Math.PI * 2);
+    return p;
+  }
+  const landPath = smoothPath(LAND);
+  const fairwayPath = smoothPath(FAIRWAY);
+  const greenPath = ellipsePath(GREEN, 1);
+  const fringePath = ellipsePath(GREEN, FRINGE_K);
+  const riverPath = smoothLine(RIVER);
+  // Penha d’Águia vista de frente: paredão com o topo plano
+  const rockPath = (() => {
+    const p = new Path2D(), X = ROCK.x, Y = ROCK.y;
+    p.moveTo(X - 112, Y + 8);
+    p.lineTo(X - 104, Y - 36);
+    p.lineTo(X - 97, Y - 84);
+    p.lineTo(X - 86, Y - 128);
+    p.lineTo(X - 80, Y - 170);
+    p.lineTo(X - 66, Y - 190);
+    p.lineTo(X - 30, Y - 196);
+    p.lineTo(X + 8, Y - 192);
+    p.lineTo(X + 44, Y - 199);
+    p.lineTo(X + 74, Y - 190);
+    p.lineTo(X + 84, Y - 150);
+    p.lineTo(X + 92, Y - 104);
+    p.lineTo(X + 104, Y - 52);
+    p.lineTo(X + 116, Y + 6);
+    p.quadraticCurveTo(X, Y + 34, X - 112, Y + 8);
+    p.closePath();
+    return p;
+  })();
+  // tudo o que não é terra (para a espuma só aparecer no mar)
+  const seaOnly = (() => {
+    const p = new Path2D();
+    p.rect(-3000, -3000, 8000, 8000);
+    p.addPath(landPath);
+    return p;
+  })();
+  // socalcos da encosta
+  const terraces = (() => {
+    const p = new Path2D();
+    for (let i = 0; i < 20; i++) {
+      const y0 = 980 + i * 68;
+      p.moveTo(40, y0 + 14);
+      p.bezierCurveTo(300, y0 - 30, 640, y0 + 34, 960, y0 - 6);
+    }
+    return p;
+  })();
+  const hitCtx = document.createElement('canvas').getContext('2d');
+  hitCtx.lineWidth = RIVER_W;
+  hitCtx.lineJoin = 'round';
+  hitCtx.lineCap = 'round';
+
+  function inBridge(x, y) {
+    const dx = x - BRIDGE.x, dy = y - BRIDGE.y, c = Math.cos(BRIDGE.a), s = Math.sin(BRIDGE.a);
+    return Math.abs(dx * c + dy * s) < BRIDGE.w / 2 && Math.abs(-dx * s + dy * c) < BRIDGE.l / 2;
+  }
+  function surface(x, y) {
+    if (!hitCtx.isPointInPath(landPath, x, y)) return 'sea';
+    if (y > 390 && y < 2100 && hitCtx.isPointInStroke(riverPath, x, y) && !inBridge(x, y)) return 'river';
+    const dx = (x - GREEN.x) / GREEN.rx, dy = (y - GREEN.y) / GREEN.ry, e = dx * dx + dy * dy;
+    if (e <= 1) return 'green';
+    if (e <= FRINGE_K * FRINGE_K) return 'fringe';
+    if (hitCtx.isPointInPath(fairwayPath, x, y)) return 'fairway';
+    return 'rough';
+  }
+  const isWater = s => s === 'sea' || s === 'river';
+
+  /* Detalhes decorativos fixos */
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const waves = Array.from({ length: 140 }, () => ({ x: -800 + rnd() * 2600, y: -600 + rnd() * 3200, len: 30 + rnd() * 50, ph: rnd() * 6.28 }));
+  const tufts = [];
+  while (tufts.length < 250) {
+    const x = 60 + rnd() * 880, y = 80 + rnd() * 1900;
+    const s = surface(x, y);
+    if (s === 'rough') tufts.push({ x, y, r: 3 + rnd() * 4 });
+  }
+  const rocks = [[925,1110,16],[938,1140,9],[700,960,12],[565,850,8],[60,820,14],[45,850,8],[880,470,13],[600,60,11],[58,1460,14],[44,1490,8],[930,1520,13],[912,1700,11],[70,1700,12],[935,1380,9]];
+
+  const ring = (x, y, r, test) => {
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4;
+      if (test(surface(x + Math.cos(a) * r, y + Math.sin(a) * r))) return true;
+    }
+    return false;
+  };
+  const wet = (x, y, r) => ring(x, y, r, s => s === 'sea' || s === 'river');
+  const nearOpen = (x, y, r) => ring(x, y, r, s => s === 'fairway' || s === 'green' || s === 'fringe');
+  // árvores e hortênsias só na encosta (rough), longe do jogo
+  const trees = [];
+  for (let i = 0; i < 3200 && trees.length < 50; i++) {
+    const x = 70 + rnd() * 860, y = 120 + rnd() * 1900, r = 13 + rnd() * 10;
+    if (surface(x, y) !== 'rough') continue;
+    if (wet(x, y, r + 8) || nearOpen(x, y, r + 55)) continue;
+    if (Math.hypot(x - TEE.x, y - TEE.y) < 130) continue;
+    if (x > HOUSE.x1 - 50 && x < HOUSE.x2 + 50 && y > HOUSE.y1 - 60 && y < HOUSE.y2 + 40) continue;
+    const ex = (x - ROCK.x) / (ROCK.rx + 60), ey = (y - ROCK.y) / (ROCK.ry + 60);
+    if (ex * ex + ey * ey < 1) continue;
+    if (trees.some(t => Math.hypot(t.x - x, t.y - y) < t.r + r + 14)) continue;
+    trees.push({ x, y, r });
+  }
+  const HYDR = ['#5b7bd5', '#7b93e6', '#a572d6', '#e08ab8', '#6aa8e8'];
+  const hydr = [];
+  for (let i = 0; i < 2000 && hydr.length < 24; i++) {
+    const x = 70 + rnd() * 860, y = 120 + rnd() * 1900;
+    if (surface(x, y) !== 'rough' || wet(x, y, 26) || nearOpen(x, y, 40)) continue;
+    if (trees.some(t => Math.hypot(t.x - x, t.y - y) < t.r + 22)) continue;
+    const c = HYDR[Math.floor(rnd() * HYDR.length)], dots = [];
+    for (let k = 0; k < 7; k++) dots.push({ x: (rnd() - 0.5) * 30, y: (rnd() - 0.5) * 22, r: 4 + rnd() * 3 });
+    hydr.push({ x, y, c, dots });
+  }
+  const clouds = Array.from({ length: 7 }, (_, i) => ({ x: rnd() * 1500, y: 200 + i * 290 + rnd() * 120, rx: 150 + rnd() * 110, ry: 45 + rnd() * 35, v: 6 + rnd() * 6 }));
+
+  /* ---------- Canvas e câmara ---------- */
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  let cw = 0, ch = 0, dpr = 1;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cw = window.innerWidth; ch = window.innerHeight;
+    canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const cam = { ...VIEW_ALL };
+  let camTarget = VIEW_ALL;
+  function view() {
+    const padT = 78, padB = 110;
+    const ah = Math.max(100, ch - padT - padB);
+    const sc = Math.min(cw / cam.w, ah / cam.h);
+    return { sc, ox: (cw - cam.w * sc) / 2 - cam.x * sc, oy: padT + (ah - cam.h * sc) / 2 - cam.y * sc };
+  }
+
+  /* ---------- Estado do jogo ---------- */
+  const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ball = { x: TEE.x, y: TEE.y, z: 0, lipped: false, scale: 1 };
+  let last = { x: TEE.x, y: TEE.y };
+  let vel = { x: 0, y: 0 };
+  let strokes = 0, splashes = 0, help = false, holeR = 10;
+  let wind = { a: 0, s: 0 };
+  let state = 'ready';     // ready, aiming, flying, rolling, splash, sinking, won, card
+  let mode = 'drive';      // drive ou putt
+  let flight = null, aim = null, sinkT = 0;
+  let dusk = 0, eagle = null;
+  const BOOST = 1.5, ACE_R = 35;
+  let boost = false, lastDown = { t: -1e9, near: false };
+  let fx = [];
+  let time = 0;
+  const lastSplashMsg = { sea: -1, river: -1 }, seenSplash = { sea: 0, river: 0 };
+  let bumpedThisShot = false;
+  const lastHit = { house: -1, rock: -1 };
+
+  function newWind() {
+    wind = help ? { a: 0, s: 0 } : { a: rnd() * Math.PI * 2, s: 0.25 + rnd() * 0.75 };
+    updateHUD();
+  }
+
+  /* ---------- Interface ---------- */
+  const $ = id => document.getElementById(id);
+  let toastTimer = 0, toastCur = null;
+  function renderToast() {
+    const el = $('toast');
+    el.textContent = '';
+    const main = document.createElement('div');
+    main.textContent = toastCur.main();
+    el.appendChild(main);
+    if (toastCur.sub) {
+      const extra = document.createElement('div');
+      extra.className = 'toast-sub';
+      extra.textContent = toastCur.sub();
+      el.appendChild(extra);
+    }
+  }
+  function toast(msg, ms = 2800, sub) {
+    const el = $('toast');
+    toastCur = { main: msg, sub: sub || null };
+    renderToast();
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+  }
+  function updateHUD() {
+    $('strokes').textContent = t().strokes(strokes);
+    $('parLabel').textContent = t().par;
+    $('hint').textContent = mode === 'putt' ? t().hintPutt : t().hintDrive;
+    const w = $('wind');
+    w.hidden = mode === 'putt';
+    $('windText').textContent = wind.s > 0 ? t().wind(Math.round(wind.s * 28)) : t().noWind;
+    $('windArrow').style.transform = 'rotate(' + (wind.a * 180 / Math.PI) + 'deg)';
+    $('windArrow').style.opacity = wind.s > 0 ? 1 : 0.3;
+    $('skipBtn').textContent = t().skip;
+  }
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    updateHUD();
+    if (!$('overlay').hidden) fillCard();
+    if (toastCur && $('toast').classList.contains('show')) renderToast();
+  }
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => { lang = b.dataset.lang; applyLang(); }));
+
+  const EMAIL = ['pontadopargogolfmadeira', 'gmail.com'].join('@');
+  let cardWon = false;
+  function scoreName(n) {
+    return t().names[Math.min(Math.max(n, 1), 8) - 1];
+  }
+  function fillCard() {
+    const tt = t();
+    $('cardScore').textContent = cardWon ? tt.score(scoreName(strokes), strokes) : '';
+    $('cardScore').hidden = !cardWon;
+    $('cardTitle').textContent = cardWon ? tt.winTitle : tt.skipTitle;
+    $('cardForSale').textContent = tt.forSale;
+    $('mainTag').textContent = tt.mainTag;
+    $('cardOffers').textContent = tt.offers;
+    $('cardOffers').textContent = tt.offers;
+    $('cardNote').textContent = tt.note;
+    const href = 'mailto:' + EMAIL + '?subject=' + encodeURIComponent(tt.subject) + '&body=' + encodeURIComponent(tt.body);
+    $('mailBtn').textContent = tt.send;
+    $('mailBtn').href = href;
+    $('copied').hidden = true;
+    $('cardAction').textContent = cardWon ? tt.replay : tt.back;
+  }
+  let prevState = 'ready';
+  function openCard(won) {
+    cardWon = won;
+    fillCard();
+    if (!won) prevState = state;
+    state = 'card';
+    document.body.classList.add('ended');
+    const o = $('overlay');
+    o.hidden = false;
+    requestAnimationFrame(() => o.classList.add('show'));
+    setTimeout(() => $('mailBtn').focus({ preventScroll: true }), 50);
+  }
+  function closeCard() {
+    const o = $('overlay');
+    o.classList.remove('show');
+    setTimeout(() => { o.hidden = true; }, 300);
+    document.body.classList.remove('ended');
+    if (cardWon) resetGame();
+    else state = prevState === 'aiming' ? 'ready' : prevState;
+  }
+  $('skipBtn').addEventListener('click', () => { if (state !== 'card') openCard(false); });
+  function showCopied(ok) {
+    const el = $('copied');
+    el.textContent = (ok ? t().copied : t().writeTo) + ' ' + EMAIL;
+    el.hidden = false;
+  }
+  function copyEmail() {
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = EMAIL;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCopied(ok);
+      } catch (e) { showCopied(false); }
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(EMAIL).then(() => showCopied(true), fallback);
+    } else {
+      fallback();
+    }
+  }
+  $('mailBtn').addEventListener('click', copyEmail);
+  $('cardAction').addEventListener('click', closeCard);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && state === 'card') closeCard(); });
+
+  function resetGame() {
+    Object.assign(ball, { x: TEE.x, y: TEE.y, z: 0, lipped: false, scale: 1 });
+    last = { x: TEE.x, y: TEE.y };
+    vel = { x: 0, y: 0 };
+    strokes = 0; splashes = 0; help = false; holeR = 10;
+    seenSplash.sea = 0; seenSplash.river = 0; boost = false;
+    mode = 'drive'; state = 'ready'; dusk = 0; eagle = null; fx = [];
+    camTarget = VIEW_ALL;
+    newWind();
+    updateHUD();
+  }
+
+  /* ---------- Entrada (rato / toque) ---------- */
+  const maxDrag = () => Math.max(110, Math.min(190, Math.min(cw, ch) * 0.34));
+  canvas.addEventListener('pointerdown', e => {
+    if (state !== 'ready') return;
+    {
+      const v = view(), now = performance.now();
+      const near = Math.hypot(e.clientX - (ball.x * v.sc + v.ox), e.clientY - (ball.y * v.sc + v.oy)) < 38;
+      if (mode === 'drive' && near && lastDown.near && now - lastDown.t < 450) {
+        boost = !boost;
+        lastDown = { t: -1e9, near: false };
+      } else {
+        lastDown = { t: now, near };
+      }
+    }
+    canvas.setPointerCapture(e.pointerId);
+    aim = { sx: e.clientX, sy: e.clientY, cx: e.clientX, cy: e.clientY };
+    state = 'aiming';
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (state === 'aiming' && aim) { aim.cx = e.clientX; aim.cy = e.clientY; }
+  });
+  function aimInfo() {
+    const dx = aim.sx - aim.cx, dy = aim.sy - aim.cy, len = Math.hypot(dx, dy);
+    if (len < 1) return null;
+    return { x: dx / len, y: dy / len, p: Math.min(len / maxDrag(), 1) };
+  }
+  canvas.addEventListener('pointerup', () => {
+    if (state !== 'aiming') return;
+    const a = aim ? aimInfo() : null;
+    aim = null;
+    if (!a || a.p < 0.06) { state = 'ready'; return; }
+    shoot(a);
+  });
+  canvas.addEventListener('pointercancel', () => { if (state === 'aiming') { aim = null; state = 'ready'; } });
+
+  function shoot(a) {
+    strokes++;
+    last = { x: ball.x, y: ball.y };
+    ball.lipped = false;
+    bumpedThisShot = false;
+    if (mode === 'drive') {
+      const boosted = boost;
+      boost = false;
+      const carry = a.p * MAX_CARRY * (boosted ? BOOST : 1);
+      const drift = wind.s * WIND_MAX * (carry / MAX_CARRY);
+      flight = {
+        sx: ball.x, sy: ball.y,
+        ex: ball.x + a.x * carry + Math.cos(wind.a) * drift,
+        ey: ball.y + a.y * carry + Math.sin(wind.a) * drift,
+        dx: a.x, dy: a.y, carry, t: 0, boosted,
+        dur: (0.6 + 0.9 * a.p) * (boosted ? 1.25 : 1), peak: (30 + 130 * a.p) * (boosted ? 1.3 : 1)
+      };
+      state = 'flying';
+    } else {
+      vel = { x: a.x * a.p * MAX_PUTT, y: a.y * a.p * MAX_PUTT };
+      state = 'rolling';
+    }
+    updateHUD();
+  }
+
+  function splash(x, y) {
+    const kind = surface(x, y) === 'river' ? 'river' : 'sea';
+    state = 'splash';
+    fx.push({ x, y, t: 0 });
+    ball.z = 0;
+    strokes++;
+    splashes++;
+    const list = kind === 'river' ? t().riverSplashes : t().splashes;
+    let i = 0;
+    if (seenSplash[kind] > 0) {
+      do { i = 1 + Math.floor(rnd() * (list.length - 1)); } while (i === lastSplashMsg[kind] && list.length > 2);
+    }
+    seenSplash[kind]++;
+    lastSplashMsg[kind] = i;
+    toast(() => (kind === 'river' ? t().riverSplashes : t().splashes)[i], 3400, () => t().penalty);
+    updateHUD();
+    setTimeout(() => {
+      Object.assign(ball, { x: last.x, y: last.y, z: 0 });
+      vel = { x: 0, y: 0 };
+      settle(true);
+    }, 1400);
+  }
+
+  function checkHelp() {
+    if (!help && (splashes >= 3 || strokes >= 11)) {
+      help = true;
+      holeR = 17;
+      wind = { a: 0, s: 0 };
+      setTimeout(() => toast(() => t().help, 3400), 900);
+    }
+  }
+
+  function settle(fromSplash) {
+    const s = surface(ball.x, ball.y);
+    const prevMode = mode;
+    mode = (s === 'green' || s === 'fringe') ? 'putt' : 'drive';
+    last = { x: ball.x, y: ball.y };
+    checkHelp();
+    if (mode === 'drive') newWind();
+    if (mode === 'putt' && prevMode !== 'putt' && !fromSplash) toast(() => t().onGreen, 2200);
+    camTarget = mode === 'putt' ? VIEW_PUTT : VIEW_ALL;
+    state = 'ready';
+    updateHUD();
+  }
+
+  function sink() {
+    state = 'sinking';
+    sinkT = 0;
+    vel = { x: 0, y: 0 };
+  }
+
+  function win() {
+    state = 'won';
+    camTarget = VIEW_ALL;
+    document.body.classList.add('ended');
+    setTimeout(() => openCard(true), 1900);
+  }
+
+  /* ---------- Física ---------- */
+  function obstacleAt(x, y) {
+    if (x > HOUSE.x1 && x < HOUSE.x2 && y > HOUSE.y1 && y < HOUSE.y2) return 'house';
+    const ex = (x - ROCK.x) / ROCK.rx, ey = (y - ROCK.y) / ROCK.ry;
+    if (ex * ex + ey * ey < 1) return 'rock';
+    return null;
+  }
+  function hitMessage(kind) {
+    if (bumpedThisShot) return;
+    bumpedThisShot = true;
+    const list = kind === 'house' ? t().houseHits : t().rockHits;
+    let i;
+    do { i = Math.floor(rnd() * list.length); } while (i === lastHit[kind] && list.length > 1);
+    lastHit[kind] = i;
+    toast(() => (kind === 'house' ? t().houseHits : t().rockHits)[i], 3200);
+  }
+  function bounce(kind, px, py) {
+    let nx, ny;
+    if (kind === 'rock') { nx = (px - ROCK.x) / (ROCK.rx * ROCK.rx); ny = (py - ROCK.y) / (ROCK.ry * ROCK.ry); }
+    else if (px <= HOUSE.x1) { nx = -1; ny = 0; }
+    else if (px >= HOUSE.x2) { nx = 1; ny = 0; }
+    else if (py <= HOUSE.y1) { nx = 0; ny = -1; }
+    else { nx = 0; ny = 1; }
+    const d = Math.hypot(nx, ny) || 1;
+    nx /= d; ny /= d;
+    const dot = vel.x * nx + vel.y * ny;
+    if (dot < 0) {
+      vel.x = (vel.x - 2 * dot * nx) * 0.6;
+      vel.y = (vel.y - 2 * dot * ny) * 0.6;
+    }
+    ball.x = px; ball.y = py;
+    hitMessage(kind);
+  }
+
+  function roll(dt) {
+    let sp = Math.hypot(vel.x, vel.y);
+    const steps = Math.ceil(sp * dt / 2) + 1;
+    const h = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      const s = surface(ball.x, ball.y);
+      if (isWater(s)) { splash(ball.x, ball.y); return; }
+      sp = Math.hypot(vel.x, vel.y);
+      const hx = HOLE.x - ball.x, hy = HOLE.y - ball.y, d = Math.hypot(hx, hy);
+      if (d < holeR) {
+        if (sp < CAPTURE) { sink(); return; }
+        if (!ball.lipped) {
+          ball.lipped = true;
+          const ang = (rnd() - 0.5) * 0.7, c = Math.cos(ang), sn = Math.sin(ang);
+          vel = { x: (vel.x * c - vel.y * sn) * 0.8, y: (vel.x * sn + vel.y * c) * 0.8 };
+          toast(() => t().lip, 1800);
+        }
+      } else if (d > holeR * 1.6) {
+        ball.lipped = false;
+      }
+      if (d < holeR * 2.2 && sp < CAPTURE * 0.7 && d > 0.01) {
+        vel.x += hx / d * 60 * h;
+        vel.y += hy / d * 60 * h;
+      }
+      const dec = DECEL[s] * h;
+      sp = Math.hypot(vel.x, vel.y);
+      if (sp <= dec) { vel = { x: 0, y: 0 }; break; }
+      vel.x -= vel.x / sp * dec;
+      vel.y -= vel.y / sp * dec;
+      const nx = ball.x + vel.x * h, ny = ball.y + vel.y * h;
+      const ob = obstacleAt(nx, ny);
+      if (ob) { bounce(ob, ball.x, ball.y); continue; }
+      ball.x = nx;
+      ball.y = ny;
+    }
+    if (vel.x === 0 && vel.y === 0) settle(false);
+  }
+
+  function update(dt) {
+    time += dt;
+    // câmara
+    const k = Math.min(1, dt * 3.5);
+    cam.x += (camTarget.x - cam.x) * k;
+    cam.y += (camTarget.y - cam.y) * k;
+    cam.w += (camTarget.w - cam.w) * k;
+    cam.h += (camTarget.h - cam.h) * k;
+
+    if (state === 'flying') {
+      flight.t += dt;
+      const p = Math.min(flight.t / flight.dur, 1);
+      ball.x = flight.sx + (flight.ex - flight.sx) * p;
+      ball.y = flight.sy + (flight.ey - flight.sy) * p;
+      ball.z = Math.sin(Math.PI * p) * flight.peak;
+      const ob = p > 0.5 ? obstacleAt(ball.x, ball.y) : null;
+      if (ob && (ob === 'rock' || ball.z < 50)) {
+        ball.z = 0;
+        for (let i = 0; i < 60 && obstacleAt(ball.x, ball.y); i++) { ball.x -= flight.dx * 2; ball.y -= flight.dy * 2; }
+        vel = { x: -flight.dx * 150 + (rnd() - 0.5) * 60, y: -flight.dy * 150 + (rnd() - 0.5) * 60 };
+        hitMessage(ob);
+        state = 'rolling';
+        return;
+      }
+      if (p >= 1) {
+        ball.z = 0;
+        if (isWater(surface(ball.x, ball.y))) splash(ball.x, ball.y);
+        else if (Math.hypot(ball.x - HOLE.x, ball.y - HOLE.y) < (flight.boosted ? ACE_R : holeR + 3)) sink();
+        else {
+          vel = { x: flight.dx * flight.carry * 0.16, y: flight.dy * flight.carry * 0.16 };
+          state = 'rolling';
+        }
+      }
+    } else if (state === 'rolling') {
+      roll(dt);
+    } else if (state === 'sinking') {
+      sinkT += dt / 0.4;
+      ball.x += (HOLE.x - ball.x) * Math.min(1, dt * 12);
+      ball.y += (HOLE.y - ball.y) * Math.min(1, dt * 12);
+      ball.scale = Math.max(0, 1 - sinkT);
+      if (sinkT >= 1) win();
+    }
+
+    if (state === 'won' || (state === 'card' && cardWon)) dusk = Math.min(1, dusk + dt / 1.6);
+    if (dusk > 0 && !eagle) eagle = { t: 0 };
+    if (eagle) eagle.t += dt;
+    fx.forEach(f => { f.t += dt / 1.2; });
+    fx = fx.filter(f => f.t < 1);
+    updateLife(dt);
+  }
+
+
+  /* ---------- Vida marinha (baleia e golfinhos) ---------- */
+  let life = [], nextLife = 7;
+  function visibleRect() {
+    const v = view();
+    return { x0: (20 - v.ox) / v.sc, x1: (cw - 20 - v.ox) / v.sc, y0: (95 - v.oy) / v.sc, y1: (ch - 140 - v.oy) / v.sc };
+  }
+  function clearSea(x, y, r) {
+    if (surface(x, y) !== 'sea') return false;
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4;
+      if (surface(x + Math.cos(a) * r, y + Math.sin(a) * r) !== 'sea') return false;
+    }
+    return true;
+  }
+  function spawnLife() {
+    const R = visibleRect();
+    if (R.x1 - R.x0 < 50 || R.y1 - R.y0 < 50) return;
+    const whale = rnd() < 0.4;
+    for (let tries = 0; tries < 40; tries++) {
+      const x = R.x0 + rnd() * (R.x1 - R.x0), y = R.y0 + rnd() * (R.y1 - R.y0);
+      const a = rnd() * Math.PI * 2;
+      if (whale) {
+        if (clearSea(x, y, 85)) { life.push({ type: 'whale', x, y, a, t: 0, dur: 7 }); return; }
+      } else {
+        let ok = true;
+        for (let d = 0; d <= 360; d += 60) {
+          if (!clearSea(x + Math.cos(a) * d, y + Math.sin(a) * d, 35)) { ok = false; break; }
+        }
+        if (ok) { life.push({ type: 'dolphins', x, y, a, t: 0, dur: 4.4, n: rnd() < 0.5 ? 3 : 2 }); return; }
+      }
+    }
+  }
+  function updateLife(dt) {
+    if (!RM && life.length === 0 && time > nextLife) {
+      spawnLife();
+      nextLife = time + 14 + rnd() * 14;
+    }
+    life.forEach(l => { l.t += dt; });
+    life = life.filter(l => l.t < l.dur);
+  }
+
+  function drawWhale(l) {
+    const t = l.t;
+    const vis = t < 1.2 ? t / 1.2 : t < 4.6 ? 1 : Math.max(0, 1 - (t - 4.6) / 0.9);
+    ctx.save();
+    ctx.translate(l.x, l.y);
+    ctx.rotate(l.a);
+    ctx.scale(1.3, 1.3);
+    if (vis > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,' + 0.16 * vis + ')';
+      ctx.beginPath(); ctx.ellipse(-4, 0, 66, 21, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(30,46,58,' + 0.85 * vis + ')';
+      ctx.beginPath();
+      ctx.moveTo(55, 0);
+      ctx.bezierCurveTo(55, -16, 10, -17, -25, -11);
+      ctx.quadraticCurveTo(-55, -5, -68, 0);
+      ctx.quadraticCurveTo(-55, 5, -25, 11);
+      ctx.bezierCurveTo(10, 17, 55, 16, 55, 0);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,' + 0.12 * vis + ')';
+      ctx.beginPath(); ctx.ellipse(12, -5, 28, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    if (t > 4.7 && t < 6.6) {
+      const k = (t - 4.7) / 1.9, al = Math.sin(Math.PI * k);
+      ctx.translate(-62 - k * 8, 0);
+      ctx.fillStyle = 'rgba(255,255,255,' + 0.3 * al + ')';
+      ctx.beginPath(); ctx.ellipse(0, 0, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(30,46,58,' + 0.9 * al + ')';
+      for (const sgn of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-4, sgn * 14, -16, sgn * 24);
+        ctx.quadraticCurveTo(-8, sgn * 10, -10, 0);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    if (t > 1.3 && t < 4.0) {
+      const k = (t - 1.3) / 2.7;
+      const hx = l.x + Math.cos(l.a) * 44, hy = l.y + Math.sin(l.a) * 44;
+      const rise = Math.min(1, k * 3), fade = k < 0.45 ? 1 : 1 - (k - 0.45) / 0.55;
+      const H = 85 * rise, W = 10 + 26 * k;
+      const g = ctx.createLinearGradient(hx, hy, hx, hy - H - W);
+      g.addColorStop(0, 'rgba(255,255,255,' + 0.85 * fade + ')');
+      g.addColorStop(1, 'rgba(255,255,255,' + 0.25 * fade + ')');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(hx - 3, hy);
+      ctx.quadraticCurveTo(hx - W, hy - H * 0.7, hx - W * 0.8, hy - H);
+      ctx.quadraticCurveTo(hx, hy - H - W, hx + W * 0.8, hy - H);
+      ctx.quadraticCurveTo(hx + W, hy - H * 0.7, hx + 3, hy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,' + 0.9 * fade + ')';
+      for (let i = 0; i < 14; i++) {
+        const side = i % 2 ? 1 : -1, spread = 0.4 + 0.6 * ((i * 37) % 10) / 10;
+        const ang = -Math.PI / 2 + side * (0.35 + 1.0 * spread), dist = W * 0.7 + 8 + 26 * k * spread;
+        const fall = Math.max(0, k - 0.3) * 90 * spread;
+        circle(hx + Math.cos(ang) * dist, hy - H * 0.85 + Math.sin(ang) * dist + fall, 1.6 + spread); ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,' + 0.35 * fade + ')';
+      ctx.beginPath(); ctx.ellipse(hx, hy, 12 + 20 * k, 6 + 8 * k, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawDolphins(l) {
+    const ca = Math.cos(l.a), sa = Math.sin(l.a);
+    for (let i = 0; i < l.n; i++) {
+      const lat = (i - (l.n - 1) / 2) * 18;
+      for (let k = 0; k < 2; k++) {
+        const st = i * 0.35 + k * 1.6, p = (l.t - st) / 1.0;
+        if (p < -0.3 || p > 1.3) continue;
+        const base = k * 200 - i * 18;
+        for (const pe of [0, 1]) {
+          const d = Math.abs(p - pe);
+          if (d < 0.3) {
+            const al = base + pe * 140;
+            ctx.strokeStyle = 'rgba(255,255,255,' + (1 - d / 0.3) * 0.6 + ')';
+            ctx.lineWidth = 2;
+            circle(l.x + ca * al - sa * lat, l.y + sa * al + ca * lat, 4 + d * 40); ctx.stroke();
+          }
+        }
+        if (p < 0 || p > 1) continue;
+        const al = base + p * 140;
+        const x = l.x + ca * al - sa * lat, y = l.y + sa * al + ca * lat;
+        const h = Math.sin(Math.PI * p) * 45, sc = 1 + h / 140;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(l.a);
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 15, 5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(x, y - h);
+        ctx.rotate(l.a);
+        ctx.scale(sc * 1.25, sc * 1.25);
+        ctx.fillStyle = '#6a8594';
+        ctx.beginPath();
+        ctx.moveTo(22, 0);
+        ctx.quadraticCurveTo(16, -2.5, 12, -3);
+        ctx.bezierCurveTo(4, -7, -10, -6, -15, -1.5);
+        ctx.lineTo(-22, -6);
+        ctx.lineTo(-19, 0);
+        ctx.lineTo(-22, 6);
+        ctx.lineTo(-15, 1.5);
+        ctx.bezierCurveTo(-10, 6, 4, 7, 12, 3);
+        ctx.quadraticCurveTo(16, 2.5, 22, 0);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.beginPath(); ctx.ellipse(2, -2, 9, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
+  /* ---------- Desenho ---------- */
+  function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); }
+
+  function drawSea(v) {
+    const g = ctx.createLinearGradient(0, 0, 0, ch);
+    g.addColorStop(0, '#0b3c57');
+    g.addColorStop(1, '#13668a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.setTransform(dpr * v.sc, 0, 0, dpr * v.sc, dpr * v.ox, dpr * v.oy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    const tt = RM ? 0 : time;
+    for (const w of waves) {
+      const off = Math.sin(tt * 0.8 + w.ph) * 12;
+      ctx.beginPath();
+      ctx.moveTo(w.x + off, w.y);
+      ctx.quadraticCurveTo(w.x + off + w.len / 2, w.y - 7, w.x + off + w.len, w.y);
+      ctx.stroke();
+    }
+    for (const l of life) { if (l.type === 'whale') drawWhale(l); else drawDolphins(l); }
+  }
+
+  function drawRiver() {
+    ctx.save();
+    ctx.clip(landPath);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(16,46,28,0.5)';
+    ctx.lineWidth = RIVER_W + 14;
+    ctx.stroke(riverPath);
+    ctx.strokeStyle = '#2b82a6';
+    ctx.lineWidth = RIVER_W;
+    ctx.stroke(riverPath);
+    ctx.strokeStyle = '#46a3c8';
+    ctx.lineWidth = RIVER_W * 0.5;
+    ctx.stroke(riverPath);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([12, 34]);
+    ctx.lineDashOffset = RM ? 0 : -time * 28;
+    ctx.stroke(riverPath);
+    ctx.setLineDash([]);
+    ctx.restore();
+    // foz: espuma onde a ribeira encontra o mar
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.3 + 0.12 * Math.sin(time * 2)) + ')';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(146, 440, 30 + 3 * Math.sin(time * 1.5), 20, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(138, 440, 46 + 4 * Math.sin(time * 1.5 + 1), 32, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  function drawBridge() {
+    const w = BRIDGE.w, l = BRIDGE.l;
+    ctx.save();
+    ctx.translate(BRIDGE.x, BRIDGE.y);
+    ctx.rotate(BRIDGE.a);
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(-w / 2 + 3, -l / 2 + 4, w, l);
+    ctx.fillStyle = '#cbc3b1';
+    ctx.fillRect(-w / 2, -l / 2, w, l);
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1.5;
+    for (let y = -l / 2 + 10; y < l / 2; y += 10) {
+      ctx.beginPath(); ctx.moveTo(-w / 2 + 8, y); ctx.lineTo(w / 2 - 8, y); ctx.stroke();
+    }
+    ctx.fillStyle = '#8b8274';
+    ctx.fillRect(-w / 2, -l / 2, 8, l);
+    ctx.fillRect(w / 2 - 8, -l / 2, 8, l);
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.fillRect(-w / 2, -l / 2, 3, l);
+    ctx.fillRect(w / 2 - 8, -l / 2, 3, l);
+    ctx.restore();
+  }
+
+  function drawScenery() {
+    for (const h of hydr) {
+      for (const d of h.dots) {
+        ctx.fillStyle = h.c;
+        circle(h.x + d.x, h.y + d.y, d.r); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.28)';
+        circle(h.x + d.x - 1, h.y + d.y - 1, d.r * 0.45); ctx.fill();
+      }
+    }
+    for (const t of trees) {
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      circle(t.x + 7, t.y + 9, t.r); ctx.fill();
+      ctx.fillStyle = '#2c6335';
+      circle(t.x, t.y, t.r); ctx.fill();
+      ctx.fillStyle = '#3c8044';
+      circle(t.x - t.r * 0.2, t.y - t.r * 0.25, t.r * 0.72); ctx.fill();
+      ctx.fillStyle = '#58a257';
+      circle(t.x - t.r * 0.32, t.y - t.r * 0.38, t.r * 0.32); ctx.fill();
+    }
+  }
+
+  function drawClouds() {
+    const tt = RM ? 0 : time;
+    ctx.save();
+    ctx.clip(landPath);
+    ctx.fillStyle = 'rgba(0,25,35,0.07)';
+    for (const c of clouds) {
+      const x = (((c.x + tt * c.v) % 1700) + 1700) % 1700 - 400;
+      ctx.beginPath(); ctx.ellipse(x, c.y, c.rx, c.ry, -0.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawLand() {
+    // falésia de basalto e espuma
+    ctx.save();
+    ctx.translate(0, 18);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.28 + 0.08 * Math.sin(time * 1.4)) + ')';
+    ctx.lineWidth = 16;
+    ctx.stroke(landPath);
+    ctx.fillStyle = '#272f2c';
+    ctx.fill(landPath);
+    ctx.restore();
+    ctx.fillStyle = '#39433d';
+    ctx.save(); ctx.translate(0, 8); ctx.fill(landPath); ctx.restore();
+    for (const [x, y, r] of rocks) {
+      ctx.fillStyle = '#242b29'; circle(x, y + 4, r); ctx.fill();
+      ctx.fillStyle = '#3b453f'; circle(x - 2, y, r * 0.85); ctx.fill();
+    }
+    // encosta verde, com socalcos
+    ctx.fillStyle = '#4b8040';
+    ctx.fill(landPath);
+    ctx.save();
+    ctx.clip(landPath);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(14,44,24,0.16)';
+    ctx.stroke(terraces);
+    ctx.translate(0, -4);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.stroke(terraces);
+    ctx.restore();
+    ctx.fillStyle = '#41763a';
+    for (const p of tufts) { circle(p.x, p.y, p.r); ctx.fill(); }
+    // fairway
+    ctx.fillStyle = '#7aae4c';
+    ctx.fill(fairwayPath);
+    ctx.save();
+    ctx.clip(fairwayPath);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    for (let y = 440; y < 1860; y += 70) ctx.fillRect(290, y, 360, 35);
+    ctx.restore();
+    // green
+    ctx.fillStyle = '#8dc457';
+    ctx.fill(fringePath);
+    ctx.fillStyle = '#a5d66c';
+    ctx.fill(greenPath);
+    ctx.save();
+    ctx.clip(greenPath);
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    for (let x = 280; x < 620; x += 44) ctx.fillRect(x, 200, 22, 240);
+    ctx.restore();
+    // tee
+    ctx.fillStyle = '#8fc35a';
+    ctx.fillRect(TEE.x - 34, TEE.y - 20, 68, 40);
+    ctx.fillStyle = '#ffffff';
+    circle(TEE.x - 26, TEE.y - 12, 4); ctx.fill();
+    circle(TEE.x + 26, TEE.y - 12, 4); ctx.fill();
+    drawRiver();
+    drawBridge();
+    drawScenery();
+    drawClouds();
+  }
+
+  function drawHole() {
+    ctx.fillStyle = '#1d2a1f';
+    circle(HOLE.x, HOLE.y, holeR); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    if (state !== 'sinking' && state !== 'won' && !(state === 'card' && cardWon)) {
+      const top = HOLE.y - 78, wv = Math.sin(time * 4) * 3;
+      ctx.strokeStyle = '#f5f5f5';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(HOLE.x, HOLE.y); ctx.lineTo(HOLE.x, top); ctx.stroke();
+      ctx.fillStyle = '#d1352b';
+      ctx.beginPath();
+      ctx.moveTo(HOLE.x, top);
+      ctx.quadraticCurveTo(HOLE.x + 16, top + 4 + wv, HOLE.x + 32, top + 9 + wv);
+      ctx.lineTo(HOLE.x, top + 19);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  const GROOVES = [[-74,-176,110],[-56,-190,150],[-38,-170,100],[-14,-188,170],[10,-176,130],[30,-194,176],[52,-172,120],[70,-180,100],[-92,-120,80],[88,-110,86]];
+  const LEDGES = [[-76,-120,15],[-50,-92,18],[30,-112,16],[60,-70,20],[-20,-52,24],[76,-30,18],[-90,-42,14],[8,-140,12]];
+
+  function mistWisp(x, y, r, a) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, 0.2);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, 'rgba(255,255,255,' + a + ')');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    circle(0, 0, r); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawRock() {
+    const X = ROCK.x, Y = ROCK.y, tt = RM ? 0 : time;
+    // espuma na base, só sobre o mar
+    ctx.save();
+    ctx.clip(seaOnly, 'evenodd');
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.3 + 0.1 * Math.sin(time * 1.6)) + ')';
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.ellipse(X + 6, Y + 8, 112, 24, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(X + 6, Y + 8, 128, 30, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    // sombra no chão
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(X + 20, Y + 12, 120, 26, 0, 0, Math.PI * 2); ctx.fill();
+    // o paredão
+    const g = ctx.createLinearGradient(0, Y - 200, 0, Y + 10);
+    g.addColorStop(0, '#7b8570');
+    g.addColorStop(0.18, '#5f695c');
+    g.addColorStop(1, '#2b3331');
+    ctx.fillStyle = g;
+    ctx.fill(rockPath);
+    ctx.save();
+    ctx.clip(rockPath);
+    ctx.fillStyle = 'rgba(0,0,0,0.24)';
+    ctx.fillRect(X + 8, Y - 210, 140, 240);
+    for (const [dx, y0, len] of GROOVES) {
+      const lean = dx > 0 ? 3 : -3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(X + dx, Y + y0); ctx.lineTo(X + dx + lean, Y + y0 + len); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(X + dx + 3, Y + y0); ctx.lineTo(X + dx + 3 + lean, Y + y0 + len); ctx.stroke();
+    }
+    for (const [dx, dy, r] of LEDGES) {
+      ctx.fillStyle = 'rgba(52,92,44,0.85)';
+      ctx.beginPath(); ctx.ellipse(X + dx, Y + dy, r * 0.8, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(X + dx + r * 0.5, Y + dy + 2, r * 0.45, r * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(52,92,44,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(X + dx - r * 0.3, Y + dy); ctx.lineTo(X + dx - r * 0.3, Y + dy + r * 0.9); ctx.stroke();
+    }
+    // relva e mato no topo
+    ctx.fillStyle = '#4f8c3d';
+    ctx.fillRect(X - 130, Y - 210, 260, 36);
+    ctx.fillStyle = '#6cab4b';
+    ctx.fillRect(X - 130, Y - 210, 260, 11);
+    ctx.fillStyle = '#3f7a35';
+    for (let x = X - 100; x <= X + 100; x += 14) { circle(x, Y - 174 + Math.sin(x * 0.7) * 4, 9); ctx.fill(); }
+    if (dusk > 0) {
+      const gl = ctx.createLinearGradient(X - 112, 0, X + 112, 0);
+      gl.addColorStop(0, 'rgba(255,170,70,' + 0.42 * dusk + ')');
+      gl.addColorStop(0.55, 'rgba(255,150,60,' + 0.12 * dusk + ')');
+      gl.addColorStop(1, 'rgba(255,150,60,0)');
+      ctx.fillStyle = gl;
+      ctx.fillRect(X - 130, Y - 210, 260, 250);
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke(rockPath);
+    // neblina a passar pelo rochedo
+    mistWisp(X - 20 + Math.sin(tt * 0.25) * 34, Y - 148, 90, 0.38);
+    mistWisp(X + 40 + Math.sin(tt * 0.2 + 2) * 40, Y - 92, 110, 0.28);
+  }
+
+  // casa de colmo de Santana
+  function drawHouse() {
+    const cx = (HOUSE.x1 + HOUSE.x2) / 2, by = HOUSE.y2, k = (HOUSE.x2 - HOUSE.x1) / 60;
+    const hw = 36, H = 78;
+    ctx.save();
+    ctx.translate(cx, by);
+    ctx.scale(k, k);
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(8, 2, hw + 6, 8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#d7b15c';
+    ctx.beginPath(); ctx.moveTo(-hw, 0); ctx.lineTo(0, -H); ctx.lineTo(hw, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(80,50,10,0.18)';
+    ctx.beginPath(); ctx.moveTo(0, -H); ctx.lineTo(hw, 0); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(110,70,20,0.35)';
+    ctx.lineWidth = 1.6;
+    for (let n = 1; n <= 8; n++) {
+      const yy = -n * 9, half = hw * (1 - (n * 9) / H);
+      ctx.beginPath(); ctx.moveTo(-half, yy); ctx.lineTo(half, yy); ctx.stroke();
+    }
+    ctx.fillStyle = '#b88a3e';
+    ctx.beginPath(); ctx.ellipse(0, -H, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+    // parede da frente, com porta e janelas
+    ctx.fillStyle = '#f5f0e4';
+    ctx.fillRect(-17, -28, 34, 28);
+    ctx.fillStyle = '#c8372d';
+    ctx.fillRect(-5, -21, 10, 21);
+    ctx.fillStyle = dusk > 0.2 ? 'rgba(255,211,110,' + dusk + ')' : '#2f6c9c';
+    ctx.fillRect(-14, -21, 7, 8);
+    ctx.fillRect(7, -21, 7, 8);
+    ctx.restore();
+  }
+
+  // águia vista de cima, a sair do topo da Penha d’Águia
+  const EAGLE = { cx: 500, cy: 330, rx: 330, ry: 190, lift: 120 };
+  function eagleShape(s, flat) {
+    const c = col => flat || col;
+    ctx.fillStyle = c('#4b3524');
+    for (const sg of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(10, sg * 4);
+      ctx.bezierCurveTo(10, sg * s * 0.5, 4, sg * s * 0.85, -4, sg * s);
+      ctx.lineTo(-11, sg * s * 0.86);
+      ctx.lineTo(-8, sg * s * 0.76);
+      ctx.lineTo(-17, sg * s * 0.68);
+      ctx.lineTo(-12, sg * s * 0.58);
+      ctx.lineTo(-22, sg * s * 0.48);
+      ctx.lineTo(-14, sg * s * 0.38);
+      ctx.lineTo(-20, sg * s * 0.26);
+      ctx.lineTo(-12, sg * 5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = c('#5a4230');
+    ctx.beginPath(); ctx.moveTo(-14, -5); ctx.lineTo(-38, -12); ctx.lineTo(-38, 12); ctx.lineTo(-14, 5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c('#3a2a1c');
+    ctx.beginPath(); ctx.ellipse(0, 0, 22, 7.5, 0, 0, Math.PI * 2); ctx.fill();
+    if (flat) return;
+    ctx.fillStyle = '#e9dcc0';
+    ctx.beginPath(); ctx.arc(21, 0, 5.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e8b23a';
+    ctx.beginPath(); ctx.moveTo(25, -2.2); ctx.lineTo(32, 1); ctx.lineTo(25, 2.6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(214,170,110,0.55)';
+    ctx.lineWidth = 1.6;
+    for (const sg of [-1, 1]) { ctx.beginPath(); ctx.moveTo(6, sg * 6); ctx.lineTo(-4, sg * s * 0.8); ctx.stroke(); }
+  }
+
+  function drawEagle(v) {
+    if (!eagle) return;
+    ctx.setTransform(dpr * v.sc, 0, 0, dpr * v.sc, dpr * v.ox, dpr * v.oy);
+    const t = eagle.t, e = Math.min(1, t / 2.4), k = e * e * (3 - 2 * e);
+    const th = Math.PI + 0.45 + t * (RM ? 0.22 : 0.55);
+    const px = EAGLE.cx + Math.cos(th) * EAGLE.rx, py = EAGLE.cy + Math.sin(th) * EAGLE.ry;
+    const tx = -Math.sin(th) * EAGLE.rx, ty = Math.cos(th) * EAGLE.ry;
+    const sx = ROCK.x, sy = ROCK.y - 196;
+    const dx = sx + (px - sx) * k, dy = sy + (py - EAGLE.lift - sy) * k;
+    const h = EAGLE.lift * k;
+    const tl = Math.hypot(tx, ty) || 1;
+    let hx = tx / tl, hy = ty / tl;
+    if (k < 1) {
+      const gx = px - dx, gy = py - EAGLE.lift - dy, gl = Math.hypot(gx, gy) || 1;
+      hx = hx * k + (gx / gl) * (1 - k);
+      hy = hy * k + (gy / gl) * (1 - k);
+    }
+    const ang = Math.atan2(hy, hx);
+    const flap = RM ? 0 : (1 - k * 0.7) * Math.sin(t * 10) * 0.18 + Math.sin(t * 1.3) * 0.03;
+    const s = 54 * (1 + flap), sc = 1.2 * (0.6 + 0.4 * k);
+    ctx.save();
+    ctx.translate(dx + 0.3 * h, dy + h);
+    ctx.rotate(ang);
+    ctx.scale(sc * 0.9, sc * 0.9);
+    eagleShape(s, 'rgba(0,0,0,' + 0.2 * k + ')');
+    ctx.restore();
+    ctx.save();
+    ctx.translate(dx, dy);
+    ctx.rotate(ang);
+    ctx.scale(sc, sc);
+    eagleShape(s, null);
+    ctx.restore();
+  }
+
+  function drawBall(v) {
+    const r = Math.max(7, 4.5 / v.sc) * ball.scale;
+    if (r <= 0.2) return;
+    if (state === 'ready') {
+      const pr = r * (2.3 + 0.4 * Math.sin(time * 4));
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = Math.max(1.5, 1.5 / v.sc);
+      circle(ball.x, ball.y, pr); ctx.stroke();
+    }
+    if (boost && (state === 'ready' || state === 'aiming')) {
+      ctx.strokeStyle = '#ffd36e';
+      ctx.lineWidth = Math.max(2.5, 2.5 / v.sc);
+      circle(ball.x, ball.y, r * (2.9 + 0.3 * Math.sin(time * 6))); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(ball.x + ball.z * 0.35, ball.y + 2, r * 1.1, r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+    const rr = r * (1 + ball.z / 300);
+    ctx.fillStyle = '#ffffff';
+    circle(ball.x, ball.y - ball.z, rr); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = rr * 0.2;
+    ctx.stroke();
+  }
+
+  function drawAim(v) {
+    if (state !== 'aiming' || !aim) return;
+    const a = aimInfo();
+    if (!a) return;
+    const col = 'rgb(255,' + Math.round(255 - 120 * a.p) + ',' + Math.round(255 - 200 * a.p) + ')';
+    const lw = Math.max(2, 2.5 / v.sc);
+    ctx.lineWidth = lw;
+    ctx.strokeStyle = col;
+    ctx.setLineDash([lw * 2.5, lw * 2.5]);
+    let ex, ey;
+    if (mode === 'drive') {
+      const carry = a.p * MAX_CARRY * (boost ? BOOST : 1);
+      ex = ball.x + a.x * carry; ey = ball.y + a.y * carry;
+    } else {
+      const len = 30 + a.p * 170;
+      ex = ball.x + a.x * len; ey = ball.y + a.y * len;
+    }
+    ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.setLineDash([]);
+    if (mode === 'drive') {
+      circle(ex, ey, Math.max(16, 9 / v.sc)); ctx.stroke();
+    } else {
+      const ang = Math.atan2(a.y, a.x), hs = Math.max(12, 8 / v.sc);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(ex + Math.cos(ang) * hs, ey + Math.sin(ang) * hs);
+      ctx.lineTo(ex + Math.cos(ang + 2.5) * hs, ey + Math.sin(ang + 2.5) * hs);
+      ctx.lineTo(ex + Math.cos(ang - 2.5) * hs, ey + Math.sin(ang - 2.5) * hs);
+      ctx.closePath(); ctx.fill();
+    }
+    // corda da "fisga"
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(ball.x, ball.y);
+    ctx.lineTo(ball.x - a.x * a.p * 60, ball.y - a.y * a.p * 60);
+    ctx.stroke();
+  }
+
+  function drawFx() {
+    for (const f of fx) {
+      for (let i = 0; i < 3; i++) {
+        const k = Math.max(0, f.t - i * 0.15);
+        ctx.strokeStyle = 'rgba(255,255,255,' + (1 - k) * 0.8 + ')';
+        ctx.lineWidth = 3;
+        circle(f.x, f.y, 8 + k * 55); ctx.stroke();
+      }
+    }
+  }
+
+  function drawDusk(v) {
+    if (dusk <= 0) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const g = ctx.createLinearGradient(0, 0, cw, ch);
+    g.addColorStop(0, 'rgba(255,176,84,' + 0.3 * dusk + ')');
+    g.addColorStop(0.55, 'rgba(226,112,96,' + 0.14 * dusk + ')');
+    g.addColorStop(1, 'rgba(58,32,92,' + 0.3 * dusk + ')');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.setTransform(dpr * v.sc, 0, 0, dpr * v.sc, dpr * v.ox, dpr * v.oy);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const R = 1900, w = 0.055, base = 0.95 + (RM ? 0 : Math.sin(time * 0.35) * 0.08);
+    for (let i = -3; i <= 3; i++) {
+      const a = base + i * 0.2 + Math.sin(i * 1.7) * 0.03;
+      const gr = ctx.createLinearGradient(SUN.x, SUN.y, SUN.x + Math.cos(a) * R, SUN.y + Math.sin(a) * R);
+      gr.addColorStop(0, 'rgba(255,214,140,' + 0.2 * dusk + ')');
+      gr.addColorStop(0.5, 'rgba(255,214,140,' + 0.06 * dusk + ')');
+      gr.addColorStop(1, 'rgba(255,214,140,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.moveTo(SUN.x, SUN.y);
+      ctx.lineTo(SUN.x + Math.cos(a - w) * R, SUN.y + Math.sin(a - w) * R);
+      ctx.lineTo(SUN.x + Math.cos(a + w) * R, SUN.y + Math.sin(a + w) * R);
+      ctx.closePath();
+      ctx.fill();
+    }
+    const glow = ctx.createRadialGradient(SUN.x, SUN.y, 0, SUN.x, SUN.y, 320);
+    glow.addColorStop(0, 'rgba(255,226,160,' + 0.6 * dusk + ')');
+    glow.addColorStop(1, 'rgba(255,226,160,0)');
+    ctx.fillStyle = glow;
+    circle(SUN.x, SUN.y, 320); ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    const v = view();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawSea(v);
+    drawLand();
+    drawHole();
+    drawFx();
+    // o rochedo e a casa escondem a bola quando ela está atrás deles
+    const items = [{ y: ROCK.y, f: drawRock }, { y: HOUSE.y2, f: drawHouse }].sort((a, b) => a.y - b.y);
+    let placed = false;
+    for (const it of items) {
+      if (!placed && ball.y <= it.y) { drawBall(v); placed = true; }
+      it.f();
+    }
+    if (!placed) drawBall(v);
+    drawAim(v);
+    drawDusk(v);
+    drawEagle(v);
+  }
+
+  let prev = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.033, (now - prev) / 1000);
+    prev = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  newWind();
+  applyLang();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
